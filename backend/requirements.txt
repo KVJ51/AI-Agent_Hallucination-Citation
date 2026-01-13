@@ -1,0 +1,12 @@
+fastapi>=0.110.0
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+python-dotenv==1.0.0
+httpx==0.25.2
+requests==2.31.0
+spacy==3.7.2
+nltk==3.8.1
+beautifulsoup4==4.12.2
+google-genai
+serpapi==0.1.3
+arxiv==2.1.0
