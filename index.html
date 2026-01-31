@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Hallucination & Citation Verification Agent</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --danger: #dc2626;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --border: #334155;
+            --text: #f1f5f9;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 0;
+            border-bottom: 2px solid var(--border);
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #60a5fa, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: #94a3b8;
+            font-size: 1.1em;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel h2 {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #60a5fa;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 10px;
+        }
+
+        textarea, input {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: monospace;
+            font-size: 0.95em;
+            margin-bottom: 15px;
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        textarea:focus, input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #60a5fa, #3b82f6);
+            color: white;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg);
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            width: 100%;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .results-grid {
+            grid-column: 1 / -1;
+        }
+
+        .result-item {
+            background: var(--bg);
+            border-left: 4px solid var(--primary);
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+
+        .badge-success {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .badge-warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .badge-danger {
+            background: rgba(220, 38, 38, 0.2);
+            color: var(--danger);
+        }
+
+        .risk-score {
+            font-size: 3em;
+            font-weight: 700;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .risk-bar {
+            width: 100%;
+            height: 10px;
+            background: var(--border);
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .risk-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success), var(--danger));
+            transition: width 0.3s ease;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .tabs {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            padding: 12px;
+            background: var(--bg);
+            border: 2px solid var(--border);
+            color: #94a3b8;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .claim-item {
+            background: var(--bg);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 6px;
+            border-left: 3px solid var(--primary);
+        }
+
+        .claim-text {
+            color: var(--text);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #94a3b8;
+            font-size: 0.9em;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #94a3b8;
+        }
+
+        @media (max-width: 768px) {
+            .main-grid, .stats {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .tabs {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 AI Hallucination & Citation Verification Agent</h1>
+            <p class="subtitle">Real-time agent detecting hallucinations and validating citations</p>
+        </header>
+
+        <div class="main-grid">
+            <!-- Input Panel -->
+            <div class="panel">
+                <h2>📝 Enter Content</h2>
+                <textarea id="aiContent" placeholder="Paste AI-generated text here...">Recent studies show that quantum computers will cure cancer by 2024 according to researchers at MIT. Smith et al. (2023) in their Nature publication proved this through advanced algorithms.</textarea>
+                
+                <button class="btn-primary" onclick="verifyContent()">🔍 Verify Content</button>
+                <button class="btn-secondary" onclick="clearInputs()">Clear</button>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="panel">
+                <h2>📊 Quick Stats</h2>
+                <div id="quickStats" class="empty-state">
+                    <p>Submit content to see statistics</p>
+                </div>
+            </div>
+
+            <!-- Results Panel -->
+            <div class="panel results-grid">
+                <h2>📋 Verification Results</h2>
+
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchTab(0)">Claims</button>
+                    <button class="tab-btn" onclick="switchTab(1)">Citations</button>
+                    <button class="tab-btn" onclick="switchTab(2)">Risk Score</button>
+                </div>
+
+                <div class="tab-content active">
+                    <h3 style="margin-bottom: 15px;">🔎 Claim Analysis</h3>
+                    <div id="claimsResults" class="empty-state">
+                        <p>Claims will appear here after verification</p>
+                    </div>
+                </div>
+
+                <div class="tab-content">
+                    <h3 style="margin-bottom: 15px;">📚 Citations Checked</h3>
+                    <div id="citationsResults" class="empty-state">
+                        <p>Citations will appear here</p>
+                    </div>
+                </div>
+
+                <div class="tab-content">
+                    <h3 style="margin-bottom: 15px;">⚠️ Risk Assessment</h3>
+                    <div id="riskResults" class="empty-state">
+                        <p>Risk assessment will appear here</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Panel -->
+        <div class="stats" id="statistics" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-number" id="statClaims">0</div>
+                <div class="stat-label">Claims Analyzed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="statSupported">0</div>
+                <div class="stat-label">Supported</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="statCitations">0</div>
+                <div class="stat-label">Citations Checked</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="statRisk">0%</div>
+                <div class="stat-label">Hallucination Risk</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+
+        async function verifyContent() {
+            const content = document.getElementById('aiContent').value;
+
+            if (!content.trim()) {
+                alert('Please enter content to verify');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const response = await fetch(`${API_BASE}/api/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: content })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `API error: ${response.status}`);
+                }
+
+                const results = await response.json();
+                displayResults(results);
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+                hideLoading();
+            }
+        }
+
+        function displayResults(data) {
+            hideLoading();
+
+            const claims = data.claims || [];
+            const citations = data.citations || [];
+            const risk = data.risk_assessment || {};
+
+            // Statistics
+            const supported = claims.filter(c => c.status === 'SUPPORTED').length;
+            document.getElementById('statClaims').textContent = claims.length;
+            document.getElementById('statSupported').textContent = supported;
+            document.getElementById('statCitations').textContent = citations.length;
+            document.getElementById('statRisk').textContent = risk.risk_score + '%';
+            document.getElementById('statistics').style.display = 'grid';
+
+            // Claims Tab
+            let claimsHTML = '';
+            claims.forEach((claim, idx) => {
+                const statusBadge = claim.status === 'SUPPORTED' ? 'badge-success' : 
+                                  claim.status === 'CONTRADICTED' ? 'badge-danger' : 'badge-warning';
+                claimsHTML += `
+                    <div class="claim-item">
+                        <div class="claim-text">${idx + 1}. ${claim.text}</div>
+                        <div>
+                            <span class="badge ${statusBadge}">${claim.status}</span>
+                            <span style="color: #94a3b8;">Confidence: ${(claim.confidence * 100).toFixed(0)}%</span>
+                        </div>
+                        <div style="margin-top: 8px; color: #94a3b8; font-size: 0.9em;">
+                            <strong>Evidence:</strong> ${claim.best_evidence || 'No evidence'}
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('claimsResults').innerHTML = claimsHTML || '<p>No claims found</p>';
+
+            // Citations Tab
+            let citationsHTML = '';
+            citations.forEach(cit => {
+                const statusBadge = cit.status === 'VALID' ? 'badge-success' : 'badge-danger';
+                citationsHTML += `
+                    <div class="result-item">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <strong>${cit.citation}</strong>
+                            <span class="badge ${statusBadge}">${cit.status}</span>
+                        </div>
+                        ${cit.issues && cit.issues.length > 0 ? `
+                            <ul style="margin: 8px 0 0 20px; color: #94a3b8;">
+                                ${cit.issues.map(i => `<li>${i}</li>`).join('')}
+                            </ul>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            document.getElementById('citationsResults').innerHTML = citationsHTML || '<p>No citations found</p>';
+
+            // Risk Tab
+            const riskColor = risk.risk_level === 'HIGH' ? 'var(--danger)' : 
+                             risk.risk_level === 'MEDIUM' ? 'var(--warning)' : 'var(--success)';
+            const riskHTML = `
+                <div class="result-item">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <strong style="font-size: 1.3em;">Overall Risk</strong>
+                        <span class="badge ${risk.risk_level === 'HIGH' ? 'badge-danger' : risk.risk_level === 'MEDIUM' ? 'badge-warning' : 'badge-success'}">
+                            ${risk.risk_level} (${risk.risk_score}%)
+                        </span>
+                    </div>
+                    <div class="risk-bar">
+                        <div class="risk-fill" style="width: ${risk.risk_score}%; background: linear-gradient(90deg, var(--success), ${riskColor});"></div>
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <strong>Risk Factors:</strong>
+                        <ul style="margin: 10px 0 0 20px; color: #94a3b8;">
+                            ${risk.factors ? risk.factors.map(f => `<li>${f}</li>`).join('') : '<li>No risk factors</li>'}
+                        </ul>
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <strong>Recommendations:</strong>
+                        <ul style="margin: 10px 0 0 20px; color: #94a3b8;">
+                            ${risk.recommendations ? risk.recommendations.map(r => `<li>${r}</li>`).join('') : ''}
+                        </ul>
+                    </div>
+                </div>
+            `;
+            document.getElementById('riskResults').innerHTML = riskHTML;
+        }
+
+        function showLoading() {
+            document.getElementById('claimsResults').innerHTML = '<div class="loading"><div class="spinner"></div><p>Analyzing content...</p></div>';
+            document.getElementById('citationsResults').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            document.getElementById('riskResults').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+        }
+
+        function hideLoading() {}
+
+        function switchTab(idx) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.querySelectorAll('.tab-content')[idx].classList.add('active');
+            document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+        }
+
+        function clearInputs() {
+            document.getElementById('aiContent').value = '';
+            document.getElementById('claimsResults').innerHTML = '<p>Claims will appear here</p>';
+            document.getElementById('citationsResults').innerHTML = '<p>Citations will appear here</p>';
+            document.getElementById('riskResults').innerHTML = '<p>Risk assessment will appear here</p>';
+            document.getElementById('statistics').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
